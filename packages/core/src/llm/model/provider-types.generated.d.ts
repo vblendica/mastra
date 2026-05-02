@@ -3016,6 +3016,7 @@ export type ProviderModelsMap = {
     'claude-opus4-7',
     'claude-sonnet-4',
     'deepseek-v3-0324',
+    'deepseek-v4-flash',
     'devstral-2512',
     'devstral-small-2512',
     'gemini-2.5-pro',
@@ -3753,6 +3754,22 @@ export type ProviderModelsMap = {
     'openai/o4-mini',
     'xai/grok-3',
     'xai/grok-3-mini',
+  ];
+  readonly neuralwatt: readonly [
+    'MiniMaxAI/MiniMax-M2.5',
+    'Qwen/Qwen3.5-397B-A17B-FP8',
+    'Qwen/Qwen3.6-35B-A3B',
+    'glm-5-fast',
+    'glm-5.1-fast',
+    'kimi-k2.5-fast',
+    'kimi-k2.6-fast',
+    'mistralai/Devstral-Small-2-24B-Instruct-2512',
+    'moonshotai/Kimi-K2.5',
+    'moonshotai/Kimi-K2.6',
+    'openai/gpt-oss-20b',
+    'qwen3.5-397b-fast',
+    'qwen3.6-35b-fast',
+    'zai-org/GLM-5.1-FP8',
   ];
   readonly togetherai: readonly [
     'MiniMaxAI/MiniMax-M2.5',
