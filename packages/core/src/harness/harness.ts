@@ -12,6 +12,8 @@ import { toStandardSchema } from '../schema';
 import type { StandardSchemaWithJSON } from '../schema';
 import type { MemoryStorage } from '../storage/domains/memory/base';
 import type { ObservationalMemoryRecord } from '../storage/types';
+import { getTransformedToolPayload, hasTransformedToolPayload } from '../tools/payload-transform';
+import type { ToolPayloadTransformPhase } from '../tools/types';
 import { safeStringify } from '../utils';
 import { Workspace } from '../workspace/workspace';
 import type { WorkspaceConfig } from '../workspace/workspace';
@@ -81,6 +83,11 @@ function addOptionalUsageField(
   if (value !== undefined) {
     usage[key] = (usage[key] ?? 0) + value;
   }
+}
+
+function getDisplayTransform(metadata: unknown, phase: ToolPayloadTransformPhase, fallback: unknown) {
+  const transform = getTransformedToolPayload(metadata, 'display', phase);
+  return hasTransformedToolPayload(transform) ? transform.transformed : fallback;
 }
 
 /**
@@ -1970,7 +1977,15 @@ export class Harness<TState = {}> {
 
         case 'tool-call-delta': {
           const { toolCallId, argsTextDelta, toolName } = chunk.payload;
-          this.emit({ type: 'tool_input_delta', toolCallId, argsTextDelta, toolName });
+          const transform = getTransformedToolPayload(chunk.metadata, 'display', 'input-delta');
+          if (!transform?.suppress) {
+            this.emit({
+              type: 'tool_input_delta',
+              toolCallId,
+              argsTextDelta: hasTransformedToolPayload(transform) ? transform.transformed : argsTextDelta,
+              toolName,
+            });
+          }
           break;
         }
 
@@ -1986,13 +2001,13 @@ export class Harness<TState = {}> {
             type: 'tool_call',
             id: toolCall.toolCallId,
             name: toolCall.toolName,
-            args: toolCall.args,
+            args: getDisplayTransform(chunk.metadata, 'input-available', toolCall.args),
           });
           this.emit({
             type: 'tool_start',
             toolCallId: toolCall.toolCallId,
             toolName: toolCall.toolName,
-            args: toolCall.args,
+            args: getDisplayTransform(chunk.metadata, 'input-available', toolCall.args),
           });
           this.emit({ type: 'message_update', message: { ...currentMessage } });
           break;
@@ -2004,13 +2019,13 @@ export class Harness<TState = {}> {
             type: 'tool_result',
             id: toolResult.toolCallId,
             name: toolResult.toolName,
-            result: toolResult.result,
+            result: getDisplayTransform(chunk.metadata, 'output-available', toolResult.result),
             isError: toolResult.isError ?? false,
           });
           this.emit({
             type: 'tool_end',
             toolCallId: toolResult.toolCallId,
-            result: toolResult.result,
+            result: getDisplayTransform(chunk.metadata, 'output-available', toolResult.result),
             isError: toolResult.isError ?? false,
           });
           this.emit({ type: 'message_update', message: { ...currentMessage } });
@@ -2019,14 +2034,22 @@ export class Harness<TState = {}> {
 
         case 'tool-error': {
           const toolError = chunk.payload;
-          this.emit({ type: 'tool_end', toolCallId: toolError.toolCallId, result: toolError.error, isError: true });
+          this.emit({
+            type: 'tool_end',
+            toolCallId: toolError.toolCallId,
+            result: getDisplayTransform(chunk.metadata, 'error', toolError.error),
+            isError: true,
+          });
           break;
         }
 
         case 'tool-call-approval': {
           const toolCallId = chunk.payload.toolCallId;
           const toolName = chunk.payload.toolName;
-          const toolArgs = chunk.payload.args;
+          const approvalTransform = getTransformedToolPayload(chunk.metadata, 'display', 'approval');
+          const toolArgs = hasTransformedToolPayload(approvalTransform)
+            ? approvalTransform.transformed
+            : getDisplayTransform(chunk.metadata, 'input-available', chunk.payload.args);
 
           const policy = this.resolveToolApproval(toolName);
 
@@ -2072,8 +2095,8 @@ export class Harness<TState = {}> {
         case 'tool-call-suspended': {
           const suspToolCallId = chunk.payload.toolCallId;
           const suspToolName = chunk.payload.toolName;
-          const suspArgs = chunk.payload.args;
-          const suspPayload = chunk.payload.suspendPayload;
+          const suspArgs = getDisplayTransform(chunk.metadata, 'input-available', chunk.payload.args);
+          const suspPayload = getDisplayTransform(chunk.metadata, 'suspend', chunk.payload.suspendPayload);
           const suspResumeSchema = chunk.payload.resumeSchema;
 
           this.emit({
