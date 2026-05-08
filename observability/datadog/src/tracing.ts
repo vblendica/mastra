@@ -17,6 +17,7 @@ import type {
   AnyExportedSpan,
   ModelGenerationAttributes,
   ModelStepAttributes,
+  ScoreEvent,
 } from '@mastra/core/observability';
 import { SpanType } from '@mastra/core/observability';
 import { omitKeys } from '@mastra/core/utils';
@@ -405,6 +406,68 @@ export class DatadogExporter extends BaseExporter {
     }
 
     return annotations;
+  }
+
+  /**
+   * Submit an eval score to Datadog LLM Observability for the matching ddSpan.
+   *
+   * Ordering constraint: the matching span must have already been emitted to dd-trace
+   * (i.e. its `SPAN_ENDED` event must have been processed and the trace tree flushed).
+   * On Mastra's normal scoring path this is always true — scorer hooks fire after the
+   * scored entity completes, so the root span has ended by the time `onScoreEvent` runs.
+   *
+   * If a score arrives for an unexported span (either before `SPAN_ENDED` or after the
+   * `traceState` entry has been cleaned up), the event is dropped and a warning is logged
+   * so the misuse is observable. Scores must therefore only be submitted for spans whose
+   * lifecycle has completed.
+   */
+  async onScoreEvent(event: ScoreEvent): Promise<void> {
+    if (this.isDisabled || !(tracer as any).llmobs?.submitEvaluation) return;
+
+    const { score } = event;
+    if (!score.traceId || !score.spanId) {
+      this.logger.warn('Datadog exporter: dropping score with no traceId/spanId', {
+        scorerId: score.scorerId,
+      });
+      return;
+    }
+
+    const ctx = this.traceState.get(score.traceId)?.contexts.get(score.spanId);
+    const exported = ctx?.exported;
+    if (!exported) {
+      this.logger.warn(
+        'Datadog exporter: dropping score for span that has not been emitted to dd-trace yet ' +
+          '(span_ended must be processed before submitting a score for it)',
+        {
+          traceId: score.traceId,
+          spanId: score.spanId,
+          scorerId: score.scorerId,
+        },
+      );
+      return;
+    }
+
+    try {
+      tracer.llmobs.submitEvaluation(
+        { traceId: exported.traceId, spanId: exported.spanId },
+        {
+          label: score.scorerName ?? score.scorerId,
+          value: score.score,
+          metricType: 'score',
+          mlApp: this.config.mlApp,
+          timestampMs: score.timestamp instanceof Date ? score.timestamp.getTime() : Date.now(),
+          ...(score.reason ? { reasoning: score.reason } : {}),
+          ...(score.metadata ? { metadata: score.metadata } : {}),
+        },
+      );
+    } catch (err) {
+      this.logger.error('Datadog exporter: Failed to submit evaluation', {
+        error: err,
+        traceId: score.traceId,
+        spanId: score.spanId,
+        scorerId: score.scorerId,
+      });
+    }
   }
 
   /**
