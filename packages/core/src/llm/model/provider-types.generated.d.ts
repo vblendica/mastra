@@ -1231,6 +1231,7 @@ export type ProviderModelsMap = {
     'siliconflow/deepseek-v3.2',
     'tongyi-intent-detect-v3',
   ];
+  readonly firepass: readonly ['accounts/fireworks/routers/kimi-k2p6-turbo'];
   readonly 'minimax-cn-coding-plan': readonly [
     'MiniMax-M2',
     'MiniMax-M2.1',
