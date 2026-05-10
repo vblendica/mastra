@@ -2842,20 +2842,6 @@ export type ProviderModelsMap = {
     'text-embedding-3-small',
     'text-embedding-ada-002',
   ];
-  readonly kiro: readonly [
-    'auto',
-    'claude-haiku-4.5',
-    'claude-opus-4.5',
-    'claude-opus-4.6',
-    'claude-opus-4.7',
-    'claude-sonnet-4',
-    'claude-sonnet-4.5',
-    'claude-sonnet-4.6',
-    'deepseek-3.2',
-    'minimax-m2.1',
-    'minimax-m2.5',
-    'qwen3-coder-next',
-  ];
   readonly requesty: readonly [
     'anthropic/claude-3-7-sonnet',
     'anthropic/claude-haiku-4-5',
