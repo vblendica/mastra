@@ -4397,7 +4397,7 @@
         "gemma-4-26b-a4b-it",
         "gemma-4-31b-it"
       ],
-      "docUrl": "https://ai.google.dev/gemini-api/docs/pricing",
+      "docUrl": "https://ai.google.dev/gemini-api/docs/models",
       "gateway": "models.dev",
       "npm": "@ai-sdk/google"
     },
