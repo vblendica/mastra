@@ -109,6 +109,29 @@ export interface ClientOptions {
 
 export type AgentVersionIdentifier = { versionId: string } | { status: 'draft' | 'published' };
 
+/**
+ * @experimental Agent signals are experimental and may change in a future release.
+ */
+export type AgentSignalActiveBehavior = 'deliver' | 'persist' | 'discard';
+
+/**
+ * @experimental Agent signals are experimental and may change in a future release.
+ */
+export type AgentSignalIdleBehavior = 'wake' | 'persist' | 'discard';
+
+/**
+ * @experimental Agent signals are experimental and may change in a future release.
+ */
+export type SendAgentSignalParams = GeneratedRequest<Body<'POST /agents/:agentId/signals'>>;
+
+/**
+ * @experimental Agent signals are experimental and may change in a future release.
+ */
+export interface SubscribeAgentThreadParams {
+  resourceId?: string;
+  threadId: string;
+}
+
 export interface RequestOptions {
   method?: string;
   headers?: Record<string, string>;
