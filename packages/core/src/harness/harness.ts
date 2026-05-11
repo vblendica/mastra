@@ -1835,12 +1835,14 @@ export class Harness<TState = {}> {
             const inv = part.toolInvocation;
             content.push({ type: 'tool_call', id: inv.toolCallId, name: inv.toolName, args: inv.args });
             if (inv.state === 'result' && inv.result !== undefined) {
+              const partProviderMetadata = part.providerMetadata as Record<string, unknown> | undefined;
               content.push({
                 type: 'tool_result',
                 id: inv.toolCallId,
                 name: inv.toolName,
                 result: inv.result,
                 isError: inv.isError ?? false,
+                ...(partProviderMetadata ? { providerMetadata: partProviderMetadata } : {}),
               });
             }
           } else if (part.toolCallId && part.toolName) {
@@ -1854,12 +1856,14 @@ export class Harness<TState = {}> {
           break;
         case 'tool-result':
           if (part.toolCallId && part.toolName) {
+            const resultProviderMetadata = part.providerMetadata as Record<string, unknown> | undefined;
             content.push({
               type: 'tool_result',
               id: part.toolCallId,
               name: part.toolName,
               result: part.result,
               isError: part.isError ?? false,
+              ...(resultProviderMetadata ? { providerMetadata: resultProviderMetadata } : {}),
             });
           }
           break;
@@ -2088,18 +2092,21 @@ export class Harness<TState = {}> {
 
         case 'tool-result': {
           const toolResult = chunk.payload;
+          const providerMetadata = toolResult.providerMetadata as Record<string, unknown> | undefined;
           currentMessage.content.push({
             type: 'tool_result',
             id: toolResult.toolCallId,
             name: toolResult.toolName,
             result: getDisplayTransform(chunk.metadata, 'output-available', toolResult.result),
             isError: toolResult.isError ?? false,
+            ...(providerMetadata ? { providerMetadata } : {}),
           });
           this.emit({
             type: 'tool_end',
             toolCallId: toolResult.toolCallId,
             result: getDisplayTransform(chunk.metadata, 'output-available', toolResult.result),
             isError: toolResult.isError ?? false,
+            ...(providerMetadata ? { providerMetadata } : {}),
           });
           this.emit({ type: 'message_update', message: { ...currentMessage } });
           break;
